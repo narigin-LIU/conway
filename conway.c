@@ -13,6 +13,21 @@
 bool **board;
 size_t width, height;
 
+void wrapper_bool(bool flag) {
+    if (!flag) {
+        fprintf(stderr, "SDL Error: %s", SDL_GetError());
+        exit(0);
+    }
+}
+
+const void *wrapper_pointer(const void *ptr) {
+    if (!ptr) {
+        fprintf(stderr, "SDL Error: %s", SDL_GetError());
+        exit(0);
+    }
+    return ptr;
+}
+
 void update_board()
 {
     bool **next_board = malloc(sizeof(bool *) * height);
@@ -78,32 +93,18 @@ void update_board()
 
 void update_window(SDL_Renderer *r)
 {
-    SDL_RenderClear(r);
+    wrapper_bool(SDL_RenderClear(r));
     for (size_t i = 0; i < height; i++) {
         for (size_t j = 0; j < width; j++) {
             if (board[i][j]) {
-                SDL_SetRenderDrawColor(r, 255, 255, 255, 255);
+                wrapper_bool(SDL_SetRenderDrawColor(r, 255, 255, 255, 255));
             } else { 
-                SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
+                wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
             }
-            SDL_RenderFillRect(r, &SQUARE_AT(i, j));
+            wrapper_bool(SDL_RenderFillRect(r, &SQUARE_AT(i, j)));
         }
     }
-    SDL_RenderPresent(r);
-}
-
-void print_board()
-{
-    for (size_t i = 0 ; i < height; i++) {
-        for (size_t j = 0; j < width; j++) {
-            if (board[i][j]) {
-                printf("#");
-            } else {
-                printf(" ");
-            }
-        }
-        printf("\n");
-    }
+    wrapper_bool(SDL_RenderPresent(r));
 }
 
 int main()
@@ -131,23 +132,23 @@ int main()
         }
     }
 
-    SDL_Init(SDL_INIT_VIDEO);
+    wrapper_bool(SDL_Init(SDL_INIT_VIDEO));
 
-    SDL_Window *w = SDL_CreateWindow("conway",
-            width * LEN, height * LEN, 0);
+    SDL_Window *w = (SDL_Window *) wrapper_pointer(SDL_CreateWindow("conway",
+            width * LEN, height * LEN, 0));
 
-    SDL_Renderer *r = SDL_CreateRenderer(w, NULL);
+    SDL_Renderer *r = (SDL_Renderer *) wrapper_pointer(SDL_CreateRenderer(w, NULL));
 
-    SDL_ShowWindow(w);
+    wrapper_bool(SDL_ShowWindow(w));
 
-    SDL_RenderPresent(r);
+    wrapper_bool(SDL_RenderPresent(r));
 
     bool game_running = true;
 
     while (game_running) {
         SDL_PumpEvents();
 
-        const bool *keyboard = SDL_GetKeyboardState(NULL);
+        const bool *keyboard = (const bool *) wrapper_pointer(SDL_GetKeyboardState(NULL));
         if (keyboard[SDL_SCANCODE_Q]) {
             game_running = false;
             continue;
