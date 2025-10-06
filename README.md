@@ -10,7 +10,7 @@ Firstly, build the binary:
 $ chmod +x ./build.sh && ./build.sh
 ```
 
-Then write an initial map of the game in file `input`. Like this:
+Then write an initial map of the game in a file. Like this:
 
 ```plaintext
 5 5
@@ -23,7 +23,7 @@ Then write an initial map of the game in file `input`. Like this:
 Run the game:
 
 ```console
-$ ./conway
+$ ./conway [FILE]
 ```
 
 ## Control
