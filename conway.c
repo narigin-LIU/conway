@@ -11,6 +11,7 @@
 }) \
 
 bool **board;
+bool **next_board;
 size_t width, height;
 
 void wrapper_bool(bool flag) {
@@ -30,17 +31,6 @@ const void *wrapper_pointer(const void *ptr) {
 
 void update_board()
 {
-    bool **next_board = malloc(sizeof(bool *) * height);
-    for (size_t i = 0; i < height; i++) {
-        next_board[i] = malloc(sizeof(bool) * width);
-    }
-
-    for (size_t i = 0; i < height; i++) {
-        for (size_t j = 0; j < width; j++) {
-            next_board[i][j] = false;
-        }
-    }
-
     for (size_t i = 0; i < height; i++) {
         for (size_t j = 0; j < width; j++) {
             int cnt = 0;
@@ -70,36 +60,35 @@ void update_board()
             }
 
             if (board[i][j]) {
-                if (cnt == 2 || cnt == 3) {
-                    next_board[i][j] = true;
-                } else {
-                    next_board[i][j] = false;
-                }
-            } else if (cnt == 3) {
-                next_board[i][j] = true;
+                next_board[i][j] = (cnt == 2 || cnt == 3);
             } else {
-                next_board[i][j] = false;
+                next_board[i][j] = (cnt == 3);
             }
         }
     }
 
-    for (size_t i = 0; i < height; i++) {
-        free(board[i]);
-    }
-    free(board);
-
+    // Swap boards instead of allocating/freeing
+    bool **temp = board;
     board = next_board;
+    next_board = temp;
 }
 
 void update_window(SDL_Renderer *r)
 {
     wrapper_bool(SDL_RenderClear(r));
+    bool current_color_is_white = false;
+    wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
+    
     for (size_t i = 0; i < height; i++) {
         for (size_t j = 0; j < width; j++) {
-            if (board[i][j]) {
-                wrapper_bool(SDL_SetRenderDrawColor(r, 255, 255, 255, 255));
-            } else { 
-                wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
+            if (board[i][j] != current_color_is_white) {
+                if (board[i][j]) {
+                    wrapper_bool(SDL_SetRenderDrawColor(r, 255, 255, 255, 255));
+                    current_color_is_white = true;
+                } else { 
+                    wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
+                    current_color_is_white = false;
+                }
             }
             wrapper_bool(SDL_RenderFillRect(r, &SQUARE_AT(i, j)));
         }
@@ -131,8 +120,10 @@ int main(int argc, char **argv)
     }
 
     board = malloc(sizeof(bool *) * height);
+    next_board = malloc(sizeof(bool *) * height);
     for (size_t i = 0; i < height; i++) {
         board[i] = malloc(sizeof(bool) * width);
+        next_board[i] = malloc(sizeof(bool) * width);
     }
 
     for (size_t i = 0; i < height; i++) {
@@ -174,8 +165,10 @@ int main(int argc, char **argv)
 
     for (size_t i = 0; i < height; i++) {
         free(board[i]);
+        free(next_board[i]);
     }
     free(board);
+    free(next_board);
 
     SDL_DestroyRenderer(r);
 
