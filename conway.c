@@ -29,6 +29,32 @@ const void *wrapper_pointer(const void *ptr) {
     return ptr;
 }
 
+// Allocate a 2D boolean array as contiguous memory for better cache locality
+bool **alloc_board(size_t rows, size_t cols) {
+    bool **arr = malloc(sizeof(bool *) * rows);
+    if (!arr) return NULL;
+    
+    bool *data = malloc(sizeof(bool) * rows * cols);
+    if (!data) {
+        free(arr);
+        return NULL;
+    }
+    
+    for (size_t i = 0; i < rows; i++) {
+        arr[i] = data + i * cols;
+    }
+    
+    return arr;
+}
+
+// Free a contiguous 2D boolean array
+void free_board(bool **arr) {
+    if (arr) {
+        free(arr[0]);  // Free the contiguous data block
+        free(arr);     // Free the row pointers
+    }
+}
+
 void update_board()
 {
     for (size_t i = 0; i < height; i++) {
@@ -119,11 +145,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "ERROR: cannot read the sizes of the map.\n");
     }
 
-    board = malloc(sizeof(bool *) * height);
-    next_board = malloc(sizeof(bool *) * height);
-    for (size_t i = 0; i < height; i++) {
-        board[i] = malloc(sizeof(bool) * width);
-        next_board[i] = malloc(sizeof(bool) * width);
+    board = alloc_board(height, width);
+    next_board = alloc_board(height, width);
+    if (!board || !next_board) {
+        fprintf(stderr, "ERROR: cannot allocate memory for boards\n");
+        exit(1);
     }
 
     for (size_t i = 0; i < height; i++) {
@@ -163,12 +189,8 @@ int main(int argc, char **argv)
         SDL_Delay(100);
     }
 
-    for (size_t i = 0; i < height; i++) {
-        free(board[i]);
-        free(next_board[i]);
-    }
-    free(board);
-    free(next_board);
+    free_board(board);
+    free_board(next_board);
 
     SDL_DestroyRenderer(r);
 
