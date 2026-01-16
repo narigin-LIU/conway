@@ -2,8 +2,14 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #define LEN 20
+
+// Game of Life rules
+#define SURVIVE_MIN 2
+#define SURVIVE_MAX 3
+#define BIRTH_COUNT 3
 
 #define SQUARE_AT(i, j) ((SDL_FRect) { \
     .x = (j) * LEN, .y = (i) * LEN, \
@@ -11,6 +17,7 @@
 }) \
 
 bool **board;
+bool **next_board;
 size_t width, height;
 
 void wrapper_bool(bool flag) {
@@ -28,19 +35,39 @@ const void *wrapper_pointer(const void *ptr) {
     return ptr;
 }
 
+// Allocate a 2D boolean array as contiguous memory for better cache locality
+bool **alloc_board(size_t rows, size_t cols) {
+    // Check for potential overflow in multiplication
+    if (cols > 0 && rows > SIZE_MAX / cols / sizeof(bool)) {
+        return NULL;  // Would overflow
+    }
+    
+    bool **arr = malloc(sizeof(bool *) * rows);
+    if (!arr) return NULL;
+    
+    bool *data = malloc(sizeof(bool) * rows * cols);
+    if (!data) {
+        free(arr);
+        return NULL;
+    }
+    
+    for (size_t i = 0; i < rows; i++) {
+        arr[i] = data + i * cols;
+    }
+    
+    return arr;
+}
+
+// Free a contiguous 2D boolean array
+void free_board(bool **arr) {
+    if (arr) {
+        free(arr[0]);  // Free the contiguous data block
+        free(arr);     // Free the row pointers
+    }
+}
+
 void update_board()
 {
-    bool **next_board = malloc(sizeof(bool *) * height);
-    for (size_t i = 0; i < height; i++) {
-        next_board[i] = malloc(sizeof(bool) * width);
-    }
-
-    for (size_t i = 0; i < height; i++) {
-        for (size_t j = 0; j < width; j++) {
-            next_board[i][j] = false;
-        }
-    }
-
     for (size_t i = 0; i < height; i++) {
         for (size_t j = 0; j < width; j++) {
             int cnt = 0;
@@ -70,36 +97,40 @@ void update_board()
             }
 
             if (board[i][j]) {
-                if (cnt == 2 || cnt == 3) {
-                    next_board[i][j] = true;
-                } else {
-                    next_board[i][j] = false;
-                }
-            } else if (cnt == 3) {
-                next_board[i][j] = true;
+                next_board[i][j] = (cnt == SURVIVE_MIN || cnt == SURVIVE_MAX);
             } else {
-                next_board[i][j] = false;
+                next_board[i][j] = (cnt == BIRTH_COUNT);
             }
         }
     }
 
-    for (size_t i = 0; i < height; i++) {
-        free(board[i]);
-    }
-    free(board);
-
+    // Swap boards instead of allocating/freeing
+    bool **temp = board;
     board = next_board;
+    next_board = temp;
 }
 
 void update_window(SDL_Renderer *r)
 {
     wrapper_bool(SDL_RenderClear(r));
+    // Track what color we currently have set in SDL
+    // false = black (dead cells), true = white (alive cells)
+    bool current_color = false;  // Start with black
+    wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
+    
     for (size_t i = 0; i < height; i++) {
         for (size_t j = 0; j < width; j++) {
-            if (board[i][j]) {
-                wrapper_bool(SDL_SetRenderDrawColor(r, 255, 255, 255, 255));
-            } else { 
-                wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
+            // Only change color if cell state differs from current color
+            if (board[i][j] != current_color) {
+                if (board[i][j]) {
+                    // Cell is alive, need white
+                    wrapper_bool(SDL_SetRenderDrawColor(r, 255, 255, 255, 255));
+                    current_color = true;
+                } else { 
+                    // Cell is dead, need black
+                    wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
+                    current_color = false;
+                }
             }
             wrapper_bool(SDL_RenderFillRect(r, &SQUARE_AT(i, j)));
         }
@@ -130,9 +161,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "ERROR: cannot read the sizes of the map.\n");
     }
 
-    board = malloc(sizeof(bool *) * height);
-    for (size_t i = 0; i < height; i++) {
-        board[i] = malloc(sizeof(bool) * width);
+    board = alloc_board(height, width);
+    next_board = alloc_board(height, width);
+    if (!board || !next_board) {
+        fprintf(stderr, "ERROR: cannot allocate memory for boards\n");
+        exit(1);
     }
 
     for (size_t i = 0; i < height; i++) {
@@ -172,10 +205,8 @@ int main(int argc, char **argv)
         SDL_Delay(100);
     }
 
-    for (size_t i = 0; i < height; i++) {
-        free(board[i]);
-    }
-    free(board);
+    free_board(board);
+    free_board(next_board);
 
     SDL_DestroyRenderer(r);
 
