@@ -102,19 +102,23 @@ void update_board()
 void update_window(SDL_Renderer *r)
 {
     wrapper_bool(SDL_RenderClear(r));
-    bool current_color_is_black = true;
+    // Track what color we currently have set in SDL
+    // false = black (dead cells), true = white (alive cells)
+    bool current_color = false;  // Start with black
     wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
     
     for (size_t i = 0; i < height; i++) {
         for (size_t j = 0; j < width; j++) {
-            bool cell_should_be_white = board[i][j];
-            if (cell_should_be_white == current_color_is_black) {
-                if (cell_should_be_white) {
+            // Only change color if cell state differs from current color
+            if (board[i][j] != current_color) {
+                if (board[i][j]) {
+                    // Cell is alive, need white
                     wrapper_bool(SDL_SetRenderDrawColor(r, 255, 255, 255, 255));
-                    current_color_is_black = false;
+                    current_color = true;
                 } else { 
+                    // Cell is dead, need black
                     wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
-                    current_color_is_black = true;
+                    current_color = false;
                 }
             }
             wrapper_bool(SDL_RenderFillRect(r, &SQUARE_AT(i, j)));

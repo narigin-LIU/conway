@@ -56,19 +56,23 @@ for (size_t i = 0; i < height; i++) {
 
 **Solution**: Track the current color and only change it when necessary:
 ```c
-bool current_color_is_white = false;
+// Track what color we currently have set in SDL
+// false = black (dead cells), true = white (alive cells)
+bool current_color = false;  // Start with black
 SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
 
 for (size_t i = 0; i < height; i++) {
     for (size_t j = 0; j < width; j++) {
-        if (board[i][j] != current_color_is_white) {
-            // Only change color when needed
+        // Only change color if cell state differs from current color
+        if (board[i][j] != current_color) {
             if (board[i][j]) {
+                // Cell is alive, need white
                 SDL_SetRenderDrawColor(r, 255, 255, 255, 255);
-                current_color_is_white = true;
+                current_color = true;
             } else { 
+                // Cell is dead, need black
                 SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
-                current_color_is_white = false;
+                current_color = false;
             }
         }
         SDL_RenderFillRect(r, &SQUARE_AT(i, j));
