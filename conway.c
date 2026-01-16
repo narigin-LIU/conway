@@ -102,18 +102,19 @@ void update_board()
 void update_window(SDL_Renderer *r)
 {
     wrapper_bool(SDL_RenderClear(r));
-    bool current_color_is_white = false;
+    bool current_color_is_black = true;
     wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
     
     for (size_t i = 0; i < height; i++) {
         for (size_t j = 0; j < width; j++) {
-            if (board[i][j] != current_color_is_white) {
-                if (board[i][j]) {
+            bool cell_should_be_white = board[i][j];
+            if (cell_should_be_white == current_color_is_black) {
+                if (cell_should_be_white) {
                     wrapper_bool(SDL_SetRenderDrawColor(r, 255, 255, 255, 255));
-                    current_color_is_white = true;
+                    current_color_is_black = false;
                 } else { 
                     wrapper_bool(SDL_SetRenderDrawColor(r, 0, 0, 0, 255));
-                    current_color_is_white = false;
+                    current_color_is_black = true;
                 }
             }
             wrapper_bool(SDL_RenderFillRect(r, &SQUARE_AT(i, j)));
