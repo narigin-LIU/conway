@@ -2,8 +2,14 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #define LEN 20
+
+// Game of Life rules
+#define SURVIVE_MIN 2
+#define SURVIVE_MAX 3
+#define BIRTH_COUNT 3
 
 #define SQUARE_AT(i, j) ((SDL_FRect) { \
     .x = (j) * LEN, .y = (i) * LEN, \
@@ -31,6 +37,11 @@ const void *wrapper_pointer(const void *ptr) {
 
 // Allocate a 2D boolean array as contiguous memory for better cache locality
 bool **alloc_board(size_t rows, size_t cols) {
+    // Check for potential overflow in multiplication
+    if (cols > 0 && rows > SIZE_MAX / cols / sizeof(bool)) {
+        return NULL;  // Would overflow
+    }
+    
     bool **arr = malloc(sizeof(bool *) * rows);
     if (!arr) return NULL;
     
@@ -86,9 +97,9 @@ void update_board()
             }
 
             if (board[i][j]) {
-                next_board[i][j] = (cnt == 2 || cnt == 3);
+                next_board[i][j] = (cnt == SURVIVE_MIN || cnt == SURVIVE_MAX);
             } else {
-                next_board[i][j] = (cnt == 3);
+                next_board[i][j] = (cnt == BIRTH_COUNT);
             }
         }
     }
